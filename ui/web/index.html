@@ -48,9 +48,6 @@
         </div>
         <div class="device-menu-list" id="deviceMenuList"></div>
       </div>
-      <!-- Hidden legacy fallbacks for scripts -->
-      <span class="unified-status-pill" id="unifiedStatusPill" style="display:none;"></span>
-      <span class="latency-text" style="display:none;"></span>
     </div>
 
     <div class="titlebar-right" onmousedown="event.stopPropagation();">
@@ -104,10 +101,6 @@
           </div>
           <span class="power-label">PEAK LIMITER</span>
           <span class="online-badge" id="powerStatusBadge">ONLINE</span>
-          <!-- Hidden fallback elements for compatibility with scripts -->
-          <span id="powerDot" style="display:none;"></span>
-          <span id="powerStatusText" style="display:none;">LIMITER ACTIVE</span>
-          <span id="powerStatusSub" style="display:none;"></span>
         </label>
 
         <!-- Scope Selector Pills -->
@@ -124,9 +117,6 @@
             <input type="checkbox" id="autoWatchSwitch" checked onchange="onAutoWatchToggle(this.checked)">
             <span class="stitch-slider"></span>
           </div>
-          <span id="autoStatusBadge" style="display:none;"></span>
-          <span id="discordBadge" style="display:none;"></span>
-          <span id="targetBannerText" style="display:none;"></span>
         </label>
       </div>
     </div>
@@ -234,7 +224,6 @@
         <div class="segmented-pill-switch">
           <button class="seg-btn active" id="kneeSoftBtn" onclick="setKneeMode('soft_knee')">Soft-Knee (4:1)</button>
           <button class="seg-btn" id="kneeBrickBtn" onclick="setKneeMode('brickwall')">Brickwall (∞:1)</button>
-          <input type="checkbox" id="kneeSwitch" checked style="display:none;">
         </div>
         <label class="hearing-safe-row" title="Hard cap at your ceiling plus a 150 ms combat hold, so rounds after the first one in a burst arrive already turned down">
           <div class="stitch-switch mini">

@@ -165,24 +165,6 @@ body {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* Single Unified Status Pill */
-.unified-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: rgba(14, 22, 38, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-  padding: 3px 10px;
-  pointer-events: auto;
-  transition: all 0.2s ease;
-}
-
-.unified-status-pill:hover {
-  border-color: rgba(0, 242, 254, 0.35);
-  background: rgba(14, 22, 38, 0.95);
-}
-
 .status-pulse-dot {
   width: 6.5px;
   height: 6.5px;
@@ -196,75 +178,6 @@ body {
 @keyframes pulseDot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.65; transform: scale(0.85); }
-}
-
-.status-mode-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: #cbd5e1;
-  white-space: nowrap;
-}
-
-.status-sep {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.2);
-}
-
-.status-device-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 1.5px 6px;
-  border-radius: 6px;
-  transition: all 0.18s ease;
-  user-select: none;
-}
-
-.status-device-tag:hover {
-  background: rgba(0, 242, 254, 0.12);
-  color: #ffffff;
-}
-
-.status-device-tag.open {
-  background: rgba(0, 242, 254, 0.18);
-  color: #ffffff;
-}
-
-.status-device-tag .device-icon {
-  font-size: 11px;
-}
-
-.status-device-tag .device-name-text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: #cbd5e1;
-  max-width: 145px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.15s ease;
-}
-
-.status-device-tag:hover .device-name-text,
-.status-device-tag.open .device-name-text {
-  color: #ffffff;
-}
-
-.status-device-tag .device-chevron {
-  font-size: 8.5px;
-  color: var(--accent-cyan);
-  opacity: 0.7;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  margin-left: 1px;
-}
-
-.status-device-tag.open .device-chevron {
-  transform: rotate(180deg);
-  opacity: 1;
 }
 
 /* Audio Device Quick-Switcher Popover */
@@ -464,56 +377,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.card-info-btn {
-  display: none !important;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-subtle);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9.5px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: all 0.15s ease;
-}
-
-.card-info-btn:hover {
-  background: rgba(0, 242, 254, 0.15);
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
-  box-shadow: 0 0 6px var(--accent-cyan-glow);
-  transform: scale(1.1);
-}
-
-.btn-support-top {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(56, 189, 248, 0.20);
-  color: #cbd5e1;
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: all 0.2s ease;
-}
-
-.btn-support-top:hover {
-  background: rgba(255, 94, 91, 0.15);
-  border-color: rgba(255, 94, 91, 0.4);
-  color: #ff5e5b;
-  box-shadow: 0 0 10px rgba(255, 94, 91, 0.3);
 }
 
 .win-controls {
@@ -1041,7 +904,11 @@ input[type="range"] {
   background: #111827;
   outline: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s ease, filter 0.15s ease;
+}
+
+input[type="range"]:hover {
+  filter: brightness(1.15);
 }
 
 input[type="range"].slider-crimson::-webkit-slider-thumb,
@@ -1765,14 +1632,6 @@ input:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--accent-cyan);
   outline-offset: 2px;
-}
-
-input[type="range"] {
-  transition: filter 0.15s ease;
-}
-
-input[type="range"]:hover {
-  filter: brightness(1.15);
 }
 
 /* Toasts: text-only content, coalesced updates pulse instead of stacking */

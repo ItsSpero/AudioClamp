@@ -639,20 +639,17 @@ function setKneeMode(mode, silent = false) {
   const brickBtn = document.getElementById("kneeBrickBtn");
   const ratioBadge = document.getElementById("dynamicsRatioBadge");
   const noteText = document.getElementById("curveNoteText");
-  const kneeSwitch = document.getElementById("kneeSwitch");
 
   if (mode === "soft_knee") {
     if (softBtn) softBtn.classList.add("active");
     if (brickBtn) brickBtn.classList.remove("active");
     if (ratioBadge) ratioBadge.innerText = "4:1 RATIO";
     if (noteText) noteText.innerText = "Soft-Knee Preserving Distance (4:1)";
-    if (kneeSwitch) kneeSwitch.checked = true;
   } else {
     if (softBtn) softBtn.classList.remove("active");
     if (brickBtn) brickBtn.classList.add("active");
     if (ratioBadge) ratioBadge.innerText = "∞:1 RATIO";
     if (noteText) noteText.innerText = "Brickwall Limiter (∞:1)";
-    if (kneeSwitch) kneeSwitch.checked = false;
   }
 
   if (window.pywebview && window.pywebview.api) {
@@ -1571,7 +1568,7 @@ window.receiveTelemetry = function(data) {
   }
 
   // Real-time sub-millisecond polling latency readout in titlebar
-  const latencyText = document.getElementById("statusLatencyText") || document.querySelector(".latency-text");
+  const latencyText = document.getElementById("statusLatencyText");
   if (latencyText && data.poll_latency_ms !== undefined) {
     const modeLabel = data.mmcss_active ? "Pro Audio" : "Active";
     latencyText.innerText = `${modeLabel} · ${data.poll_latency_ms.toFixed(2)}ms`;
