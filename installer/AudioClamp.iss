@@ -11,7 +11,7 @@
 ; all-users install from the first page instead.
 
 #ifndef AppVersion
-  #define AppVersion "2.6.0"
+  #define AppVersion "2.6.2"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\onedir\AudioClamp"
