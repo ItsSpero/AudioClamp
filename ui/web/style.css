@@ -60,6 +60,72 @@ body {
   cursor: grabbing;
 }
 
+
+.titlebar-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 2px;
+}
+
+.hdr-device-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(14, 22, 38, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 3px 9px;
+  color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.hdr-device-btn:hover,
+.hdr-device-btn.open {
+  background: rgba(0, 242, 254, 0.1);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: #ffffff;
+}
+
+.hdr-device-btn .device-name-text {
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hdr-device-btn .device-chevron {
+  font-size: 8.5px;
+  color: var(--accent-cyan);
+  opacity: 0.7;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 2px;
+}
+
+.hdr-device-btn.open .device-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.hdr-latency-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 22, 38, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .titlebar-left {
   display: flex;
   align-items: center;
@@ -399,6 +465,7 @@ body {
 }
 
 .card-info-btn {
+  display: none !important;
   width: 15px;
   height: 15px;
   border-radius: 50%;

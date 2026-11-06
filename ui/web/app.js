@@ -735,7 +735,13 @@ function updateBoostStatus() {
   if (!el) return;
   const req = state.footstep_boost_db;
   const applied = state.boost_applied_db || 0;
-  let text = "Off";
+  if (req <= 0) {
+    el.style.display = "none";
+    el.textContent = "";
+    el.className = "boost-status";
+    return;
+  }
+  let text = "";
   let cls = "";
   if (req > 0) {
     if (!state.enabled) {
@@ -754,6 +760,7 @@ function updateBoostStatus() {
       cls = "on";
     }
   }
+  el.style.display = "block";
   el.textContent = text;
   el.className = `boost-status ${cls}`;
 }

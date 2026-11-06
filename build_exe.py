@@ -32,6 +32,9 @@ def find_iscc():
 def build_onedir():
     """One-folder build for the installer: starts faster than the self-extracting single file."""
     print("\nBuilding one-folder version for the installer...")
+    target_dir = os.path.join(project_dir, "dist", "onedir", "AudioClamp")
+    if os.path.isdir(target_dir):
+        shutil.rmtree(target_dir, ignore_errors=True)
     onedir_cmd = [c for c in cmd if c != "--onefile"] + [
         f"--distpath={os.path.join(project_dir, 'dist', 'onedir')}",
         f"--workpath={os.path.join(project_dir, 'build', 'onedir')}",
@@ -40,7 +43,7 @@ def build_onedir():
     if res.returncode != 0:
         print(f"One-folder build failed with exit code: {res.returncode}")
         return None
-    return os.path.join(project_dir, "dist", "onedir", "AudioClamp")
+    return target_dir
 
 
 def build_installer(source_dir):
@@ -64,6 +67,7 @@ cmd = [
     sys.executable, "-m", "PyInstaller",
     "--noconsole",
     "--onefile",
+    "--noconfirm",
     f"--icon={icon_ico}",
     f"--manifest={manifest_path}",
     f"--add-data={web_dir};ui/web",
