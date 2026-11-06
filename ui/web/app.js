@@ -51,12 +51,12 @@ const HISTORY_STEP_MS = 50;
 const HISTORY_FLOOR = 0.0158;      // -36 dBFS, anything below sits on the floor
 const NUM_SEGMENTS = 18;
 const DB_TICKS = [
-  { db: 0, color: "#ff2a5f" },
-  { db: -6, color: "#f59e0b" },
-  { db: -12, color: "#ff4d79" },
+  { db: 0, color: "#f43f5e" },
+  { db: -6, color: "#38bdf8" },
+  { db: -12, color: "#38bdf8" },
   { db: -18, color: "#64748b" },
   { db: -24, color: "#64748b" },
-  { db: -36, color: "#64748b" }
+  { db: -36, color: "#475569" }
 ];
 const GR_BAR_THRESHOLDS = [0.3, 3.0, 6.0];
 
@@ -102,11 +102,11 @@ function computeLayout(w, h) {
   };
   // Gradients are built once per resize rather than on every frame
   const g0 = ctx.createLinearGradient(grX + 8, 0, grX + 8 + grBarW, 0);
-  g0.addColorStop(0, "#f59e0b"); g0.addColorStop(1, "#f59e0b");
+  g0.addColorStop(0, "#38bdf8"); g0.addColorStop(1, "#38bdf8");
   const g1 = ctx.createLinearGradient(grX + 8, 0, grX + 8 + grBarW, 0);
-  g1.addColorStop(0, "#f59e0b"); g1.addColorStop(1, "#ff4d79");
+  g1.addColorStop(0, "#38bdf8"); g1.addColorStop(1, "#f43f5e");
   const g2 = ctx.createLinearGradient(grX + 8, 0, grX + 8 + grBarW, 0);
-  g2.addColorStop(0, "#ff2a5f"); g2.addColorStop(1, "#ff2a5f");
+  g2.addColorStop(0, "#f43f5e"); g2.addColorStop(1, "#f43f5e");
   l.grGradients = [g0, g1, g2];
   return l;
 }
@@ -317,13 +317,13 @@ function renderMeter(now) {
     const endX = traceHistory(histIn, x0, stepX, offset);
     ctx.lineTo(endX, bottom);
     ctx.closePath();
-    ctx.fillStyle = "rgba(255, 42, 95, 0.10)";
+    ctx.fillStyle = "rgba(244, 63, 94, 0.08)";
     ctx.fill();
 
     ctx.beginPath();
     ctx.moveTo(x0 - offset, scalarToY(histOut[histHead]));
     traceHistory(histOut, x0, stepX, offset);
-    ctx.strokeStyle = "rgba(0, 242, 254, 0.55)";
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
     ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
     ctx.stroke();
@@ -354,7 +354,7 @@ function renderMeter(now) {
     for (let seg = 0; seg < NUM_SEGMENTS; seg++) {
       const sy = bottom - (seg + 1) * (l.segH + 2);
       if (sy < activeTopY) break;
-      ctx.fillStyle = sy < threshYExact ? "#ff2a5f" : (sy < ambY ? "#f59e0b" : "#10b981");
+      ctx.fillStyle = sy < threshYExact ? "#f43f5e" : (sy < ambY ? "#38bdf8" : "#0284c7");
       ctx.fillRect(bx + 1, sy, l.barW - 2, l.segH);
     }
 
@@ -373,11 +373,11 @@ function renderMeter(now) {
   // 3. Limiter threshold line and LIMIT badge
   const threshY = Math.round(threshYExact) + 0.5;
   const isCeilActive = isDraggingCeiling || isCeilingHovered;
-  ctx.strokeStyle = isCeilActive ? "#ff4d79" : "#ff2a5f";
+  ctx.strokeStyle = isCeilActive ? "#fb7185" : "#f43f5e";
   ctx.lineWidth = isCeilActive ? 2 : 1.5;
   if (isCeilActive) {
-    ctx.shadowColor = "rgba(255, 42, 95, 0.6)";
-    ctx.shadowBlur = 8;
+    ctx.shadowColor = "rgba(244, 63, 94, 0.4)";
+    ctx.shadowBlur = 6;
   }
   ctx.beginPath();
   ctx.moveTo(METER_PAD.left - 2, threshY);
@@ -389,7 +389,7 @@ function renderMeter(now) {
   const badgeW = 92;
   const badgeH = 20;
   const badgeX = METER_PAD.left + l.availW - badgeW - 6;
-  ctx.fillStyle = "#ff2a5f";
+  ctx.fillStyle = "#f43f5e";
   ctx.beginPath();
   ctx.roundRect(badgeX, Math.round(threshY - badgeH / 2), badgeW, badgeH, 4);
   ctx.fill();
