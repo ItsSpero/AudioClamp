@@ -12,11 +12,15 @@ AudioClamp v2.6.2 introduces a major visual polish and decluttering pass across 
 - **Real-Time Latency Badge**: Added an isolated **Engine Status Tag** (`🟢 Pro Audio · 0.04ms`) with hover tooltips for MMCSS thread telemetry.
 - **Refined Action Controls**: Balanced sizing and borders for `Mini`, `Guide`, `Eco`, and `Support` buttons.
 
-#### 2. Clean & Decluttered Interface
+#### 2. Clean & Decluttered Interface (Midnight Navy & Ice Blue)
+- **Unified Palette**: Replaced competing neon colors (bright cyan, glowing lime green, harsh crimson, and amber) with a calm **Midnight Navy (`#0B111E` / `#111A2E`)** base and a single **Ice Blue (`#38BDF8`)** accent. Rose/Coral is now strictly reserved for active gain reduction and emergency limit indicators.
 - **Removed 12 Inline `(?)` Circles**: Eliminated the intrusive circular question mark buttons that previously cluttered every card heading and option row.
+- **Modernized VU Visualizer**: Replaced the harsh red and green meter bars with calm Ice Blue audio curves, clean telemetry readouts (`IN`, `GR`, `OUT`), and a crisp limit threshold line.
+- **Streamlined Sliders & Controls**: Both Loudness Ceiling and Footstep Recovery sliders now feature smooth Ice Blue controls with high-contrast numerical badges.
 - **Two-Column Card Alignment**: Restructured the **Dynamics Mode** and **Footstep Recovery** cards for clean symmetry.
 - **Mini-Pill Controls**: Formatted **Combat Guard** (`Off`, `-4 dB`, `-8 dB`) and **Footstep Boost** (`Off`, `+3 dB`, `+6 dB`, `+9 dB`) into sleek segmented controls.
-- **Cleaned Status Indicators**: Removed the awkward dangling `"Off"` text block under Footstep Boost.
+- **Low-Profile Preset Strip**: Compact, refined preset cards with clean slate borders (`border-slate-800`) and subtle active states.
+- **Refined Panic Reset**: Replaced the blinding hazard red button with a subtle, modern coral outline button.
 
 #### 3. New Windows Audio Optimization Guide
 - Added a dedicated **Windows Audio** category in the in-app **📖 Guide** (`#guide-windows-audio`).
