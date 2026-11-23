@@ -405,7 +405,7 @@ function renderMeter(now) {
   if (Math.abs(grTarget - smoothGR) > 0.02) settling = true;
   else smoothGR = grTarget;
 
-  ctx.fillStyle = "#ff2a5f";
+  ctx.fillStyle = "#f43f5e";
   ctx.font = "800 11px 'JetBrains Mono', monospace";
   ctx.fillText(`GR  ${smoothGR > 0.1 ? `-${smoothGR.toFixed(1)}` : "-0.0"} dB`, l.grX + l.grW / 2, top + 14);
 
@@ -538,32 +538,13 @@ function dismissToast(topic, entry) {
   setTimeout(() => entry.el.remove(), 260);
 }
 
-function updateQuickCeilingButtons(db) {
-  const btns = [
-    { id: "btnCeil_6", val: -6 },
-    { id: "btnCeil_12", val: -12 },
-    { id: "btnCeil_18", val: -18 },
-    { id: "btnCeil_24", val: -24 }
-  ];
-  btns.forEach(b => {
-    const el = document.getElementById(b.id);
-    if (el) {
-      if (Math.abs(db - b.val) < 0.3) {
-        el.classList.add("active");
-      } else {
-        el.classList.remove("active");
-      }
-    }
-  });
-}
-
 function updateSliderTrack(slider, color) {
   if (!slider) return;
   const min = parseFloat(slider.min);
   const max = parseFloat(slider.max);
   const val = parseFloat(slider.value);
   const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-  slider.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #111827 ${pct}%, #111827 100%)`;
+  slider.style.background = `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #162036 ${pct}%, #162036 100%)`;
 }
 
 function updateCeiling(db) {
@@ -574,15 +555,13 @@ function updateCeiling(db) {
   const slider = document.getElementById("ceilingSlider");
   if (slider) {
     slider.value = state.threshold_db;
-    updateSliderTrack(slider, "#ff2a5f");
+    updateSliderTrack(slider, "#f43f5e");
   }
 
   const readout = document.getElementById("ceilingReadout");
   if (readout) {
     readout.innerText = `${state.threshold_db.toFixed(1)} dB`;
   }
-
-  updateQuickCeilingButtons(state.threshold_db);
   updateGuideLiveBadges();
   updateMiniHudCeiling();
   requestRender();
@@ -603,28 +582,12 @@ function setReleaseMs(ms) {
   const slider = document.getElementById("releaseSlider");
   if (slider) {
     slider.value = val;
-    updateSliderTrack(slider, "#00f2fe");
+    updateSliderTrack(slider, "#38bdf8");
   }
   const readout = document.getElementById("releaseNum");
   if (readout) {
     readout.innerText = `${val} ms`;
   }
-
-  const tags = [
-    { id: "btnRel_50", val: 50 },
-    { id: "btnRel_120", val: 120 },
-    { id: "btnRel_300", val: 300 }
-  ];
-  tags.forEach(t => {
-    const el = document.getElementById(t.id);
-    if (el) {
-      if (Math.abs(val - t.val) < 15) {
-        el.classList.add("active");
-      } else {
-        el.classList.remove("active");
-      }
-    }
-  });
 
   if (window.pywebview && window.pywebview.api) {
     window.pywebview.api.set_release_ms(val);
@@ -1487,8 +1450,8 @@ function updateGuideLiveBadges() {
   const pEco = document.getElementById("guideBadge_eco");
   if (pEco) {
     pEco.innerText = state.eco_mode ? "LIVE: Eco Active" : "LIVE: Off";
-    pEco.style.borderColor = state.eco_mode ? "var(--accent-amber)" : "var(--border-subtle)";
-    pEco.style.color = state.eco_mode ? "var(--accent-amber)" : "var(--text-muted)";
+    pEco.style.borderColor = state.eco_mode ? "var(--accent-cyan)" : "var(--border-subtle)";
+    pEco.style.color = state.eco_mode ? "var(--accent-cyan)" : "var(--text-muted)";
   }
 }
 
@@ -1649,8 +1612,8 @@ window.receiveInitialConfig = function(cfg) {
   if (pBadge) {
     pBadge.innerText = state.enabled ? "ONLINE" : "OFF";
     pBadge.style.color = state.enabled ? "var(--accent-emerald)" : "var(--accent-crimson)";
-    pBadge.style.borderColor = state.enabled ? "rgba(16, 185, 129, 0.4)" : "rgba(255, 42, 95, 0.4)";
-    pBadge.style.background = state.enabled ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 42, 95, 0.12)";
+    pBadge.style.borderColor = state.enabled ? "rgba(16, 185, 129, 0.4)" : "rgba(244, 63, 94, 0.4)";
+    pBadge.style.background = state.enabled ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)";
   }
 
   const autoSwitch = document.getElementById("autoWatchSwitch");
@@ -1666,7 +1629,7 @@ window.receiveInitialConfig = function(cfg) {
   const cSlider = document.getElementById("ceilingSlider");
   if (cSlider) {
     cSlider.value = state.threshold_db;
-    updateSliderTrack(cSlider, "#ff2a5f");
+    updateSliderTrack(cSlider, "#f43f5e");
   }
   const cReadout = document.getElementById("ceilingReadout");
   if (cReadout) {
@@ -1682,7 +1645,7 @@ window.receiveInitialConfig = function(cfg) {
   const rSlider = document.getElementById("releaseSlider");
   if (rSlider) {
     rSlider.value = state.release_ms;
-    updateSliderTrack(rSlider, "#00f2fe");
+    updateSliderTrack(rSlider, "#38bdf8");
   }
   const rReadout = document.getElementById("releaseNum");
   if (rReadout) {
@@ -1695,7 +1658,6 @@ window.receiveInitialConfig = function(cfg) {
 
   state.active_profile = cfg.selected_profile || "PUBG: BATTLEGROUNDS";
   highlightProfileCard(state.active_profile);
-  updateQuickCeilingButtons(state.threshold_db);
 
   renderMonitoredChips();
   setScope(state.target_mode, true);
@@ -1760,9 +1722,8 @@ window.addEventListener("DOMContentLoaded", () => {
   initWindowDrag(document.querySelector(".mini-hud-bar"), false);
   updateMiniHudCeiling();
   updateMiniHudStatus();
-  updateSliderTrack(document.getElementById("ceilingSlider"), "#ff2a5f");
-  updateSliderTrack(document.getElementById("releaseSlider"), "#00f2fe");
-  updateQuickCeilingButtons(state.threshold_db);
+  updateSliderTrack(document.getElementById("ceilingSlider"), "#f43f5e");
+  updateSliderTrack(document.getElementById("releaseSlider"), "#38bdf8");
 
   const cSlider = document.getElementById("ceilingSlider");
   if (cSlider) {
@@ -1790,8 +1751,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (pBadge) {
         pBadge.innerText = enabled ? "ONLINE" : "OFF";
         pBadge.style.color = enabled ? "var(--accent-emerald)" : "var(--accent-crimson)";
-        pBadge.style.borderColor = enabled ? "rgba(16, 185, 129, 0.4)" : "rgba(255, 42, 95, 0.4)";
-        pBadge.style.background = enabled ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 42, 95, 0.12)";
+        pBadge.style.borderColor = enabled ? "rgba(16, 185, 129, 0.4)" : "rgba(244, 63, 94, 0.4)";
+        pBadge.style.background = enabled ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)";
       }
       updateGuideLiveBadges();
       updateMiniHudStatus();

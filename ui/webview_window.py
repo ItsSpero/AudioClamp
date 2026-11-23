@@ -7,29 +7,49 @@ import webbrowser
 import webview
 from typing import Optional, Dict, Any
 
-from core.config_manager import ConfigManager
+from core.config_manager import ConfigManager, GAME_PROFILES
 from core.audio_engine import AudioEngine
 from ui.tray_icon import TrayIconManager
 from core.hotkeys import HotkeyManager
+from ui.telemetry_pump import LatestValueSender
+from ui import bridge_validation as bv
+from ui.webview_hardening import harden_webview
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 INDEX_HTML = os.path.join(WEB_DIR, "index.html")
 
 class WebviewApi:
+    """Methods the page can call through window.pywebview.api. Every argument is validated by
+    ui/bridge_validation.py; invalid input is ignored and returns False (or the unchanged value)."""
+
     def __init__(self, app_window: "WebviewWindow"):
         self._app = app_window
 
+    def _set_threshold_db(self, db: float) -> None:
+        self._app.config.set("threshold_db", db)
+        self._app.config.set("threshold_percent", max(5.0, min(100.0, (10.0 ** (db / 20.0)) * 100.0)))
+
     def set_threshold(self, db_val):
-        pct = (10.0 ** (float(db_val) / 20.0)) * 100.0
-        self._app.config.set("threshold_db", float(db_val))
-        self._app.config.set("threshold_percent", float(pct))
+        db = bv.finite_number(db_val, *bv.THRESHOLD_DB_RANGE)
+        if db is None:
+            return False
+        self._set_threshold_db(db)
+        return True
 
     def toggle_enabled(self, enabled):
-        self._app.config.set("enabled", bool(enabled))
-        self._app.tray_mgr.update_icon(bool(enabled))
+        val = bv.boolean(enabled)
+        if val is None:
+            return False
+        self._app.config.set("enabled", val)
+        self._app.tray_mgr.update_icon(val)
+        return True
 
     def toggle_eco_mode(self, enabled):
-        self._app.config.set("eco_mode", bool(enabled))
+        val = bv.boolean(enabled)
+        if val is None:
+            return False
+        self._app.config.set("eco_mode", val)
+        return True
 
     def get_active_device(self):
         return getattr(self._app.engine, "active_device_name", "Default Audio Endpoint")
@@ -38,52 +58,90 @@ class WebviewApi:
         return self._app.engine.get_playback_devices()
 
     def set_default_device(self, device_id):
-        return self._app.engine.set_default_playback_device(str(device_id))
+        known = [d.get("id", "") for d in self._app.engine.get_playback_devices()]
+        dev = bv.device_id(device_id, known)
+        if dev is None:
+            return False
+        return self._app.engine.set_default_playback_device(dev)
 
     def set_knee_mode(self, mode):
-        m = str(mode)
+        m = bv.choice(mode, bv.KNEE_MODES)
+        if m is None:
+            return False
         self._app.config.set("knee_mode", m)
         if m == "soft_knee":
             self._app.config.set("compression_ratio", 4.0)
             self._app.config.set("knee_width_db", 5.0)
-        elif m == "brickwall":
+        else:
             self._app.config.set("compression_ratio", 50.0)
             self._app.config.set("knee_width_db", 0.5)
+        return True
 
     def set_hearing_safe(self, enabled):
-        self._app.config.set("hearing_safe", bool(enabled))
+        val = bv.boolean(enabled)
+        if val is None:
+            return False
+        self._app.config.set("hearing_safe", val)
+        return True
 
     def set_combat_guard(self, db_val):
-        self._app.config.set("combat_guard_db", max(0.0, min(12.0, float(db_val))))
+        db = bv.finite_number(db_val, *bv.GUARD_DB_RANGE)
+        if db is None:
+            return False
+        self._app.config.set("combat_guard_db", db)
+        return True
 
     def set_footstep_boost(self, db_val):
-        self._app.config.set("footstep_boost_db", max(0.0, min(12.0, float(db_val))))
+        db = bv.finite_number(db_val, *bv.BOOST_DB_RANGE)
+        if db is None:
+            return False
+        self._app.config.set("footstep_boost_db", db)
+        return True
 
     def set_release_ms(self, ms):
-        self._app.config.set("release_ms", float(ms))
+        val = bv.finite_number(ms, *bv.RELEASE_MS_RANGE)
+        if val is None:
+            return False
+        self._app.config.set("release_ms", val)
+        return True
 
     def set_scope(self, scope_mode):
-        self._app.config.set("target_mode", str(scope_mode))
+        mode = bv.choice(scope_mode, bv.TARGET_MODES)
+        if mode is None:
+            return False
+        self._app.config.set("target_mode", mode)
         self._app.engine.rescan_sessions_now()
+        return True
 
     def set_auto_watch_mode(self, enabled):
-        self._app.config.set("auto_watch_mode", bool(enabled))
+        val = bv.boolean(enabled)
+        if val is None:
+            return False
+        self._app.config.set("auto_watch_mode", val)
         self._app.engine.rescan_sessions_now()
+        return True
 
     def add_monitored_app(self, exe_name):
-        self._app.config.add_monitored_app(exe_name)
-        self._app.engine.rescan_sessions_now()
+        name = bv.exe_name(exe_name)
+        if name is not None:
+            self._app.config.add_monitored_app(name)
+            self._app.engine.rescan_sessions_now()
         return self._app.config.get("monitored_apps", [])
 
     def remove_monitored_app(self, exe_name):
-        self._app.config.remove_monitored_app(exe_name)
-        self._app.engine.rescan_sessions_now()
+        name = bv.exe_name(exe_name)
+        if name is not None:
+            self._app.config.remove_monitored_app(name)
+            self._app.engine.rescan_sessions_now()
         return self._app.config.get("monitored_apps", [])
 
     def get_monitored_apps(self):
         return self._app.config.get("monitored_apps", [])
 
     def set_start_with_windows(self, enabled):
+        val = bv.boolean(enabled)
+        if val is None:
+            return False
         app_path = sys.executable
         if not getattr(sys, 'frozen', False):
             installed_exe = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "AudioClamp", "AudioClamp.exe")
@@ -91,7 +149,8 @@ class WebviewApi:
                 app_path = installed_exe
             else:
                 app_path = os.path.abspath(sys.argv[0])
-        self._app.config.set_start_with_windows(bool(enabled), app_path)
+        self._app.config.set_start_with_windows(val, app_path)
+        return True
 
     def get_audio_processes(self):
         from pycaw.pycaw import AudioUtilities
@@ -139,7 +198,10 @@ class WebviewApi:
         return self._app.set_mini_mode(not self._app.is_mini_mode)
 
     def set_mini_mode(self, enabled):
-        return self._app.set_mini_mode(bool(enabled))
+        val = bv.boolean(enabled)
+        if val is None:
+            return self._app.is_mini_mode
+        return self._app.set_mini_mode(val)
 
     def browse_for_exe(self):
         if not self._app.window:
@@ -152,28 +214,30 @@ class WebviewApi:
                 file_types=file_types
             )
             if res and len(res) > 0:
-                selected_path = res[0]
-                exe_name = os.path.basename(selected_path)
-                self.set_custom_process(exe_name)
-                return exe_name
+                name = bv.exe_name(res[0], require_exe=True)
+                if name and self.set_custom_process(name):
+                    return name
         except Exception:
             pass
         return ""
 
     def set_custom_process(self, proc_name):
-        name = os.path.basename(str(proc_name).strip())
-        if name:
-            if not name.lower().endswith(".exe"):
-                name += ".exe"
-            self._app.config.set("target_process", name)
-            self._app.config.set("target_mode", "specific_app")
-            self._app.engine.rescan_sessions_now()
+        name = bv.exe_name(proc_name, require_exe=True)
+        if name is None:
+            return False
+        self._app.config.set("target_process", name)
+        self._app.config.set("target_mode", "specific_app")
+        self._app.engine.rescan_sessions_now()
+        return True
 
     def apply_profile(self, profile_name):
-        self._app.config.apply_profile(str(profile_name))
-        cfg = self._app.config.config
+        name = bv.choice(profile_name, GAME_PROFILES.keys())
+        if name is None:
+            return False
+        self._app.config.apply_profile(name)
         if self._app.window:
-            self._app._eval(f"receiveInitialConfig({json.dumps(cfg)})")
+            self._app._eval(f"receiveInitialConfig({json.dumps(self._app.config.config)})")
+        return True
 
     def emergency_reset(self):
         # Panic means "back to normal now": Footstep Boost goes off as well
@@ -183,18 +247,21 @@ class WebviewApi:
         self._app.config.set("threshold_percent", 100.0)
 
     def nudge_ceiling(self, delta_db):
-        current_db = float(self._app.config.get("threshold_db", -12.0))
-        new_db = max(-30.0, min(0.0, current_db + float(delta_db)))
-        self._app.config.set("threshold_db", new_db)
-        scalar = 10.0 ** (new_db / 20.0)
-        self._app.config.set("threshold_percent", max(5.0, min(100.0, scalar * 100.0)))
+        delta = bv.finite_number(delta_db, *bv.NUDGE_DB_RANGE)
+        if delta is None:
+            return False
+        current_db = bv.finite_number(self._app.config.get("threshold_db", -12.0), *bv.THRESHOLD_DB_RANGE)
+        new_db = max(-30.0, min(0.0, (current_db if current_db is not None else -12.0) + delta))
+        self._set_threshold_db(new_db)
         if self._app.window:
-            self._app._eval(f"if(window.nudgeCeiling) {{ window.nudgeCeiling({float(delta_db)}); }} else if(window.updateCeiling) {{ updateCeiling({round(new_db, 1)}); }}")
+            self._app._eval(f"if(window.nudgeCeiling) {{ window.nudgeCeiling({json.dumps(delta)}); }} else if(window.updateCeiling) {{ updateCeiling({json.dumps(round(new_db, 1))}); }}")
+        return True
 
     def move_window(self, x, y):
-        if self._app.window:
+        px, py = bv.window_coord(x), bv.window_coord(y)
+        if self._app.window and px is not None and py is not None:
             try:
-                self._app.window.move(int(x), int(y))
+                self._app.window.move(px, py)
             except Exception:
                 pass
 
@@ -266,6 +333,8 @@ class WebviewWindow:
         )
         self.tray_mgr.start()
 
+        self._telemetry_sender = LatestValueSender(self._send_telemetry_js)
+        self._nav_handlers: Optional[list] = None  # keeps the WebView2 navigation guards alive
         self.engine.telemetry_callback = self._on_telemetry_data
         self.engine.on_profile_auto_switched = self._on_profile_auto_switched
 
@@ -277,7 +346,8 @@ class WebviewWindow:
 
     def _on_profile_auto_switched(self, profile_name: str):
         cfg = self.config.config
-        self._eval(f"if(window.receiveInitialConfig) receiveInitialConfig({json.dumps(cfg)}); if(window.showToast) showToast('Auto-Profile: {profile_name}', 'info');")
+        toast = json.dumps(f"Auto-Profile: {profile_name}")
+        self._eval(f"if(window.receiveInitialConfig) receiveInitialConfig({json.dumps(cfg)}); if(window.showToast) showToast({toast}, 'info');")
 
     def toggle_enable(self):
         new_val = not self.config.get("enabled", True)
@@ -377,6 +447,7 @@ class WebviewWindow:
         except Exception:
             pass
         self.is_visible = False
+        self._telemetry_sender.discard_pending()
         try:
             self.window.hide()
             self._set_webview_background(True)
@@ -427,6 +498,7 @@ class WebviewWindow:
     def on_full_exit(self):
         self.is_exiting = True
         self.engine.stop()
+        self._telemetry_sender.stop()
         self.hotkey_mgr.unregister_hotkeys()
         self.tray_mgr.stop()
         if self.window:
@@ -439,7 +511,7 @@ class WebviewWindow:
     # ------------------------------------------------------------------
     # Compact HUD / mini-player mode
     # ------------------------------------------------------------------
-    MINI_SIZE = (440, 148)
+    MINI_SIZE = (440, 120)  # fits the HUD content exactly, no dead space under the meters
     FULL_MIN_SIZE = (880, 760)
 
     def toggle_mini_mode(self):
@@ -499,7 +571,7 @@ class WebviewWindow:
                 rect = wintypes.RECT()
                 if hwnd and user32.GetWindowRect(hwnd, ctypes.byref(rect)):
                     self._full_rect = (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
-                scale = self._apply_native_form((320, 120), True)
+                scale = self._apply_native_form((320, 110), True)
                 self._eval("if(window.setMiniModeUI) setMiniModeUI(true);")
                 w, h = int(self.MINI_SIZE[0] * scale), int(self.MINI_SIZE[1] * scale)
                 if hwnd and self._full_rect:
@@ -534,13 +606,18 @@ class WebviewWindow:
             pass
 
     def _on_telemetry_data(self, data: Dict[str, Any]):
-        # Pacing (20 Hz active, 5 Hz below -60 dBFS) is handled by the engine. The payload
-        # dict is reused by the engine, so it must be serialized here, synchronously.
+        # Runs on the limiter thread. Pacing (20 Hz active, 5 Hz below -60 dBFS) is handled by
+        # the engine and the payload dict is reused, so serialize now and hand the string to the
+        # sender thread; the limiter never waits on WebView2.
         if self.window and self.is_visible:
             try:
-                self.window.evaluate_js(f"receiveTelemetry({json.dumps(data)});")
+                self._telemetry_sender.submit(json.dumps(data))
             except Exception:
                 pass
+
+    def _send_telemetry_js(self, payload: str) -> None:
+        if self.window and self.is_visible:
+            self.window.evaluate_js(f"receiveTelemetry({payload});")
 
     def run(self, start_minimized: bool = False):
         try:
@@ -566,6 +643,8 @@ class WebviewWindow:
         )
 
         def on_loaded():
+            if self._nav_handlers is None:
+                self._nav_handlers = harden_webview(self.window)
             time.sleep(0.3)
             cfg = self.config.config
             self.window.evaluate_js(f"receiveInitialConfig({json.dumps(cfg)})")

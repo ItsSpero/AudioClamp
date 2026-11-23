@@ -47,6 +47,8 @@ jobs:
           python tests/test_combat_guard.py
           python tests/test_dsp_smoke.py
           python tests/test_spray_sim.py
+          python tests/test_crash_recovery.py
+          python tests/test_bridge_hardening.py
 
       - name: Build Standalone Executable & Inno Setup Installer
         run: python build_exe.py --installer

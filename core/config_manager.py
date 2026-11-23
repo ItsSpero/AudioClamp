@@ -1,11 +1,11 @@
 import os
-import json
 import winreg
 from typing import Dict, Any
 
+from core.safe_io import atomic_write_json, read_json, remove_file
+
 APPDATA_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "AudioClamp")
 CONFIG_PATH = os.path.join(APPDATA_DIR, "config.json")
-RECOVERY_PATH = os.path.join(APPDATA_DIR, "recovery.json")
 
 GAME_PROFILES: Dict[str, Dict[str, Any]] = {
     "PUBG: BATTLEGROUNDS": {
@@ -160,6 +160,8 @@ class ConfigManager:
         # Incremented on every mutation so readers can cache settings and refresh only on change
         self.revision: int = 0
         self._cleanup_legacy_registry()
+        # Written by v2.6.2 and earlier but never read; volume_recovery.json replaces it
+        remove_file(os.path.join(APPDATA_DIR, "recovery.json"))
 
     def _cleanup_legacy_registry(self):
         key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -173,23 +175,17 @@ class ConfigManager:
             pass
 
     def load_config(self) -> Dict[str, Any]:
+        cfg = DEFAULT_CONFIG.copy()
         if os.path.exists(CONFIG_PATH):
-            try:
-                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    cfg = DEFAULT_CONFIG.copy()
-                    cfg.update(data)
-                    return cfg
-            except Exception as e:
-                print(f"[ConfigManager] Could not read configuration file: {e}")
-        return DEFAULT_CONFIG.copy()
+            data = read_json(CONFIG_PATH)
+            if isinstance(data, dict):
+                cfg.update(data)
+            else:
+                print("[ConfigManager] Configuration file unreadable, using defaults")
+        return cfg
 
     def save_config(self):
-        try:
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4)
-        except Exception as e:
-            print(f"[ConfigManager] Could not save configuration file: {e}")
+        atomic_write_json(CONFIG_PATH, self.config, indent=4)
 
     def get(self, key: str, default=None):
         return self.config.get(key, default)
@@ -232,34 +228,6 @@ class ConfigManager:
         self.config["monitored_apps"] = apps
         self.revision += 1
         self.save_config()
-
-    def save_recovery_state(self, target_type: str, target_name: str, original_volume: float):
-        try:
-            state = {
-                "target_type": target_type,
-                "target_name": target_name,
-                "original_volume": original_volume
-            }
-            with open(RECOVERY_PATH, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=4)
-        except Exception:
-            pass
-
-    def clear_recovery_state(self):
-        try:
-            if os.path.exists(RECOVERY_PATH):
-                os.remove(RECOVERY_PATH)
-        except Exception:
-            pass
-
-    def get_recovery_state(self) -> Dict[str, Any] | None:
-        if os.path.exists(RECOVERY_PATH):
-            try:
-                with open(RECOVERY_PATH, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return None
 
     def set_start_with_windows(self, enabled: bool, app_path: str):
         self.set("start_with_windows", enabled)

@@ -9,7 +9,6 @@ class StubConfig:
     def get(self, k, d=None): return self.config.get(k, d)
     def set(self, k, v, save=True): self.config[k] = v; self.revision += 1
     def apply_profile(self, n): pass
-    def save_recovery_state(self, *a): pass
 
 e = AudioEngine(StubConfig())
 # DSP invariants from testing.md

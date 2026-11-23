@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>AudioClamp — Studio Peak Limiter</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Everything is local: no remote scripts, styles, fonts or network calls. Inline handlers and
+       eval stay allowed because the UI's onclick attributes and pywebview's bridge rely on them. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <link rel="preload" href="assets/fonts/Inter-Variable-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -201,12 +202,6 @@
         <input type="range" id="ceilingSlider" min="-30" max="0" step="0.5" value="-12" class="slider-crimson">
       </div>
       <div class="ceiling-footer-row">
-        <div class="quick-pills-row">
-          <button class="quick-pill" id="btnCeil_6" onclick="setCeilingDb(-6)">-6 dB</button>
-          <button class="quick-pill active" id="btnCeil_12" onclick="setCeilingDb(-12)">-12 dB</button>
-          <button class="quick-pill" id="btnCeil_18" onclick="setCeilingDb(-18)">-18 dB</button>
-          <button class="quick-pill" id="btnCeil_24" onclick="setCeilingDb(-24)">-24 dB</button>
-        </div>
         <span class="limiter-curve-note" id="curveNoteText">Brickwall Limiter (∞:1)</span>
       </div>
     </div>
@@ -253,11 +248,6 @@
         </div>
         <div class="slider-wrapper mini">
           <input type="range" id="releaseSlider" min="50" max="600" step="10" value="120" class="slider-cyan">
-        </div>
-        <div class="recovery-tags-row">
-          <button class="rec-tag" id="btnRel_50" onclick="setReleaseMs(50)">50ms</button>
-          <button class="rec-tag active" id="btnRel_120" onclick="setReleaseMs(120)">120ms</button>
-          <button class="rec-tag" id="btnRel_300" onclick="setReleaseMs(300)">300ms</button>
         </div>
         <div class="option-row" title="Makes only the game louder: Windows volume goes up, every other app goes down by the same amount, and the ceiling drops so loud sounds stay where they were">
           <span class="option-label">Footstep Boost</span>
@@ -815,7 +805,7 @@
             <div class="guide-card-title-left">
               <span class="guide-item-icon">🎛️</span>
               <span class="guide-item-name">Windows Audio Optimization (Prevent Sound Breaking)</span>
-              <span class="guide-badge-live" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #34d399;">RECOMMENDED</span>
+              <span class="guide-badge-live" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: var(--accent-emerald);">RECOMMENDED</span>
             </div>
             <span class="guide-cat-tag">Windows Setup</span>
           </div>

@@ -10,12 +10,13 @@ Every change is undone relative to the current level rather than restored to a s
 volume adjustments the user makes while the boost is active survive. A small recovery file
 records what was applied, so a crash or forced exit cannot leave the PC unbalanced.
 """
-import json
 import os
 import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from pycaw.pycaw import ISimpleAudioVolume
+
+from core.safe_io import atomic_write_json, read_json, remove_file
 
 MAX_BOOST_DB = 12.0
 _LEVEL_TOLERANCE_DB = 0.2
@@ -34,6 +35,8 @@ class FootstepBoost:
         self._last_written_db: Optional[float] = None
         # session instance id -> (ISimpleAudioVolume, linear factor currently applied)
         self._others: Dict[str, Tuple[Any, float]] = {}
+        # Last state persisted to the recovery file, so the 1 Hz rescan only touches disk on change
+        self._recovery_written: Optional[Dict[str, Any]] = None
 
     @property
     def active(self) -> bool:
@@ -133,30 +136,27 @@ class FootstepBoost:
             "boost_db": self.applied_db,
             "sessions": {key: factor for key, (_vol, factor) in self._others.items()},
         }
-        try:
-            with open(self.recovery_path, "w", encoding="utf-8") as f:
-                json.dump(state, f)
-        except Exception:
-            pass
+        if state == self._recovery_written:
+            return
+        if atomic_write_json(self.recovery_path, state):
+            self._recovery_written = state
 
     def _clear_recovery(self) -> None:
-        try:
-            if os.path.exists(self.recovery_path):
-                os.remove(self.recovery_path)
-        except Exception:
-            pass
+        self._recovery_written = None
+        remove_file(self.recovery_path)
 
     def recover_after_crash(self, endpoint: Any, device_id: str, sessions: List[Tuple[str, Any]]) -> bool:
         """Undo a boost left behind by a previous run that did not exit cleanly."""
         if not os.path.exists(self.recovery_path):
             return False
-        try:
-            with open(self.recovery_path, "r", encoding="utf-8") as f:
-                state = json.load(f)
-        except Exception:
+        state = read_json(self.recovery_path)
+        if not isinstance(state, dict):
             self._clear_recovery()
             return False
-        boost_db = float(state.get("boost_db", 0.0))
+        try:
+            boost_db = max(0.0, min(MAX_BOOST_DB, float(state.get("boost_db", 0.0))))
+        except (TypeError, ValueError):
+            boost_db = 0.0
         if endpoint is not None and boost_db > 0.0 and state.get("device_id") == device_id:
             try:
                 min_db, _max_db, _step = endpoint.GetVolumeRange()
@@ -164,10 +164,12 @@ class FootstepBoost:
                 endpoint.SetMasterVolumeLevel(max(float(min_db), cur_db - boost_db), self.guid)
             except Exception:
                 pass
-        factors: Dict[str, float] = state.get("sessions", {})
+        factors = state.get("sessions", {})
+        if not isinstance(factors, dict):
+            factors = {}
         for key, ctl in sessions:
             factor = factors.get(key)
-            if not factor:
+            if not isinstance(factor, (int, float)) or not (0.0 < factor <= 1.0):
                 continue
             try:
                 vol = ctl.QueryInterface(ISimpleAudioVolume)

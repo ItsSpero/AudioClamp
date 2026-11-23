@@ -40,7 +40,7 @@ AudioClamp is organized into three decoupled layers:
 - **Thread Boundaries**:
   - Main Thread: Owns the WebView2 window loop and Win32 message pump.
   - Limiter Worker Thread: Runs independently in high-priority MMCSS ("Pro Audio") mode at 333 Hz.
-  - Telemetry updates from worker to main thread flow through `telemetry_callback` into `window.evaluate_js`. The engine paces dispatch itself: every 50ms while audio is present, every 200ms (5 Hz) below -60 dBFS, waking immediately on a transient. Each packet carries the max peak/GR over its window. The payload dict is reused, so callbacks must serialize it synchronously.
+  - Telemetry updates from worker to main thread flow through `telemetry_callback`, which serializes the packet and hands it to `ui/telemetry_pump.py`; a separate sender thread calls `window.evaluate_js`, so the worker never waits on WebView2. The engine paces dispatch itself: every 50ms while audio is present, every 200ms (5 Hz) below -60 dBFS, waking immediately on a transient. Each packet carries the max peak/GR over its window. The payload dict is reused, so callbacks must serialize it synchronously.
   - The worker caches settings and only re-reads them when `ConfigManager.revision` changes. Any code that mutates `config.config` directly must bump `revision`.
 - **Volume Clamping Isolation**:
   - `auto_game` and `specific_app` target modes clamp individual process sessions (`ISimpleAudioVolume`). Master PC audio, Discord, and system alerts remain bit-perfect and uncompressed.

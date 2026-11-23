@@ -8,10 +8,11 @@ import ctypes
 from ctypes import POINTER, c_float, c_uint32, wintypes
 import psutil
 from comtypes import COMMETHOD, HRESULT, IUnknown, GUID, CLSCTX_ALL, COMObject, CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolumeCallback, ISimpleAudioVolume
+from pycaw.pycaw import AudioUtilities, AudioSession, IAudioEndpointVolumeCallback, IAudioSessionControl2, ISimpleAudioVolume
 from pycaw.callbacks import MMNotificationClient
 from core.config_manager import ConfigManager, GAME_PROFILES, GAME_EXE_STEMS, EXE_TO_PROFILE, APPDATA_DIR
 from core.footstep_boost import FootstepBoost
+from core.volume_recovery import VolumeLedger
 
 # Telemetry pacing: full rate while audio is present, 5 Hz once the signal sits below -60 dBFS
 SILENCE_PEAK = 0.001
@@ -143,6 +144,11 @@ class AudioEngine:
         self._master_touched: bool = False
         self._device_id: str = ""
         self.footstep_boost = FootstepBoost(self.limiter_guid, os.path.join(APPDATA_DIR, "boost_recovery.json"))
+        # Levels left behind by an unclean exit become the session baselines, so a game that comes
+        # back at its clamped mixer level is restored instead of being re-measured as "normal".
+        self.volume_ledger = VolumeLedger(os.path.join(APPDATA_DIR, "volume_recovery.json"))
+        self._leftover_session_levels: Dict[str, float] = self.volume_ledger.session_levels()
+        self.session_base_volumes.update(self._leftover_session_levels)
         self.combat_guard_active: bool = False
 
         self.active_session_name: str = "Master Audio (Global)"
@@ -334,7 +340,8 @@ class AudioEngine:
         with self.lock:
             if not self.is_limiting:
                 self.user_target_master_vol = max(0.01, min(1.0, new_vol))
-                self.config.save_recovery_state("master", "System Master", self.user_target_master_vol)
+                if self._master_touched:
+                    self.volume_ledger.record_master(self._device_id, self.user_target_master_vol)
 
     def emergency_reset_volume(self):
         with self.lock:
@@ -353,6 +360,7 @@ class AudioEngine:
                 dev = AudioUtilities.GetSpeakers()
                 if dev:
                     dev.EndpointVolume.SetMasterVolumeLevelScalar(self.user_target_master_vol, self.limiter_guid)
+                    self.volume_ledger.resolve_master(self._device_id)
 
             test_bases = dict(self._test_session_bases)
             if not self.session_base_volumes and not test_bases:
@@ -365,6 +373,7 @@ class AudioEngine:
                     continue
                 if not pid:
                     continue
+                proc_name = ""
                 base: Optional[float] = test_bases.get(pid)
                 if base is None:
                     try:
@@ -376,6 +385,8 @@ class AudioEngine:
                     continue
                 try:
                     s.SimpleAudioVolume.SetMasterVolume(base, None)
+                    if proc_name:
+                        self.volume_ledger.resolve_session(proc_name)
                 except Exception:
                     pass
         except Exception as e:
@@ -518,6 +529,7 @@ class AudioEngine:
         master_meter = None
         callback_handler = None
         callback_ptr = None
+        session_mgr = None  # IAudioSessionManager2 of the bound endpoint, reused by every rescan
         peaks_buffer = (c_float * 2)()
         peak_value = c_float(0.0)
         peak_ptr = ctypes.pointer(peak_value)
@@ -525,7 +537,7 @@ class AudioEngine:
         next_device_retry = 0.0
 
         def release_master_device() -> None:
-            nonlocal vol_endpoint, master_meter, callback_handler, callback_ptr
+            nonlocal vol_endpoint, master_meter, callback_handler, callback_ptr, session_mgr
             if vol_endpoint is not None and callback_ptr is not None:
                 try:
                     vol_endpoint.UnregisterControlChangeNotify(callback_ptr)
@@ -535,10 +547,20 @@ class AudioEngine:
             master_meter = None
             callback_handler = None
             callback_ptr = None
+            session_mgr = None
 
         def init_master_device() -> bool:
             """(Re)bind the default render endpoint. Never raises; returns False when no device is usable."""
-            nonlocal vol_endpoint, master_meter, callback_handler, callback_ptr, peaks_buffer, last_master_written
+            nonlocal vol_endpoint, master_meter, callback_handler, callback_ptr, peaks_buffer, last_master_written, session_mgr
+            if vol_endpoint is not None and self._master_touched:
+                # Default device switched while master clamping ran: hand the old device back at
+                # the user's level instead of leaving it wherever the clamp last put it.
+                try:
+                    vol_endpoint.SetMasterVolumeLevelScalar(self.user_target_master_vol, guid)
+                    self.volume_ledger.resolve_master(self._device_id)
+                except Exception:
+                    pass
+            self._master_touched = False
             release_master_device()
             try:
                 device = AudioUtilities.GetSpeakers()
@@ -547,6 +569,10 @@ class AudioEngine:
                 endpoint = device.EndpointVolume
                 meter = device._dev.Activate(IAudioMeterInformationFull._iid_, CLSCTX_ALL, None).QueryInterface(IAudioMeterInformationFull)
                 channels = max(2, int(endpoint.GetChannelCount()))
+                try:
+                    mgr = device.AudioSessionManager
+                except Exception:
+                    mgr = None
                 handler = AudioCallbackHandler(self)
                 ptr = handler.QueryInterface(IAudioEndpointVolumeCallback)
                 try:
@@ -556,12 +582,23 @@ class AudioEngine:
                 initial_vol = float(endpoint.GetMasterVolumeLevelScalar())
                 device_name = getattr(device, "FriendlyName", "Default Audio Endpoint")
                 device_id = getattr(device, "id", "") or ""
+                pending = self.volume_ledger.master_level(device_id)
+                if pending is not None:
+                    # This endpoint was left clamped by an unclean exit or an unplug mid-clamp
+                    try:
+                        endpoint.SetMasterVolumeLevelScalar(pending, guid)
+                        initial_vol = pending
+                        self.volume_ledger.resolve_master(device_id)
+                        print("[AudioEngine] Restored a master level left clamped on this device")
+                    except Exception:
+                        pass
             except Exception as e:
                 print(f"[AudioEngine] Audio endpoint unavailable: {e}")
                 return False
 
             vol_endpoint = endpoint
             master_meter = meter
+            session_mgr = mgr
             callback_handler = handler
             callback_ptr = ptr
             self.active_device_name = device_name
@@ -581,6 +618,9 @@ class AudioEngine:
                 return
             if abs(value - last_master_written) <= VOLUME_WRITE_EPSILON:
                 return
+            # Ledger first, so a kill right after the write still finds the user's level on disk.
+            # No disk access unless the device or the user's level changed.
+            self.volume_ledger.record_master(self._device_id, self.user_target_master_vol)
             vol_endpoint.SetMasterVolumeLevelScalar(value, guid)
             last_master_written = value
             self.current_applied_master_vol = value
@@ -588,6 +628,26 @@ class AudioEngine:
 
         if not init_master_device():
             next_device_retry = perf_counter() + DEVICE_RETRY_SEC
+
+        def list_sessions() -> List[Any]:
+            """Audio sessions on the bound endpoint, enumerated on its cached session manager in
+            ~0.3 ms. AudioUtilities.GetAllSessions() re-resolves the default device and activates a
+            new manager every call (~28 ms measured), which froze the limiter on every rescan."""
+            if session_mgr is not None:
+                try:
+                    found: List[Any] = []
+                    enum = session_mgr.GetSessionEnumerator()
+                    for i in range(enum.GetCount()):
+                        ctl = enum.GetSession(i)
+                        if ctl is None:
+                            continue
+                        ctl2 = ctl.QueryInterface(IAudioSessionControl2)
+                        if ctl2 is not None:
+                            found.append(AudioSession(ctl2))
+                    return found
+                except Exception:
+                    pass
+            return AudioUtilities.GetAllSessions()
 
         def session_key(sess: Any) -> str:
             try:
@@ -597,27 +657,57 @@ class AudioEngine:
 
         try:
             if os.path.exists(self.footstep_boost.recovery_path):
-                leftovers = [(session_key(x), x._ctl) for x in AudioUtilities.GetAllSessions()]
+                leftovers = [(session_key(x), x._ctl) for x in list_sessions()]
                 if self.footstep_boost.recover_after_crash(vol_endpoint, self._device_id, leftovers):
                     print("[AudioEngine] Undid a Footstep Boost left over from an unclean exit")
         except Exception:
             pass
 
+        # Game sessions left clamped by an unclean exit go back to their true level right away.
+        # Games that are not running keep their entry (and seeded baseline) until they reappear.
+        if self._leftover_session_levels:
+            restored: Set[str] = set()
+            try:
+                for s in list_sessions():
+                    try:
+                        pid = s.ProcessId
+                        if not pid:
+                            continue
+                        name = psutil.Process(pid).name()
+                        level = self._leftover_session_levels.get(name)
+                        if level is None:
+                            continue
+                        s.SimpleAudioVolume.SetMasterVolume(level, guid)
+                        restored.add(name)
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            for name in restored:
+                self.volume_ledger.resolve_session(name)
+            if restored:
+                print(f"[AudioEngine] Restored {len(restored)} app volume(s) left clamped by an unclean exit")
+            self._leftover_session_levels = {}
+
         # ---- Session targets (parallel lists rebuilt only on rescan) ----
         t_pids: List[int] = []
+        t_names: List[str] = []  # process name per target ("" for in-app test sessions)
         t_meters: List[Any] = []
         t_vols: List[Any] = []
         t_bases: List[float] = []
         t_last: List[float] = []
         pid_name_cache: Dict[int, str] = {}
 
-        def release_targets(keep_pids: Set[int]) -> None:
+        def release_targets(keep_pids: Set[int], keep_names: Set[str]) -> None:
             """Return every dropped session to its baseline before forgetting it."""
             for i in range(len(t_pids)):
                 if t_pids[i] in keep_pids:
                     continue
                 try:
                     t_vols[i].SetMasterVolume(t_bases[i], guid)
+                    name = t_names[i]
+                    if name and name not in keep_names:
+                        self.volume_ledger.resolve_session(name)
                 except Exception:
                     pass
                 self._test_session_bases.pop(t_pids[i], None)
@@ -758,6 +848,7 @@ class AudioEngine:
                     if session_targeting:
                         try:
                             new_pids: List[int] = []
+                            new_names: List[str] = []
                             new_meters: List[Any] = []
                             new_vols: List[Any] = []
                             new_bases: List[float] = []
@@ -769,7 +860,7 @@ class AudioEngine:
                             want_boost = footstep_boost_db > 0.0 and enabled
                             boost_others: List[Tuple[str, Any]] = []
 
-                            for s in AudioUtilities.GetAllSessions():
+                            for s in list_sessions():
                                 try:
                                     pid = s.ProcessId
                                 except Exception:
@@ -827,8 +918,11 @@ class AudioEngine:
                                             raw_vol = 1.0
                                         base = 1.0 if raw_vol < 0.20 else raw_vol
                                         self.session_base_volumes[proc_name] = base
+                                    # Persist the true level before the first clamp lands on it
+                                    self.volume_ledger.record_session(proc_name, base)
 
                                 new_pids.append(pid)
+                                new_names.append("" if is_test else proc_name)
                                 new_meters.append(meter)
                                 new_vols.append(vol)
                                 new_bases.append(base)
@@ -840,8 +934,8 @@ class AudioEngine:
 
                             pid_name_cache = new_cache
                             test_session_found = found_test
-                            release_targets(set(new_pids))
-                            t_pids, t_meters, t_vols, t_bases = new_pids, new_meters, new_vols, new_bases
+                            release_targets(set(new_pids), set(new_names))
+                            t_pids, t_names, t_meters, t_vols, t_bases = new_pids, new_names, new_meters, new_vols, new_bases
                             t_last = [-1.0] * len(t_pids)
 
                             # Footstep Boost only runs while a clamped game session exists
@@ -888,8 +982,8 @@ class AudioEngine:
                             self.is_app_running = False
                     else:
                         if t_pids:
-                            release_targets(set())
-                            t_pids, t_meters, t_vols, t_bases, t_last = [], [], [], [], []
+                            release_targets(set(), set())
+                            t_pids, t_names, t_meters, t_vols, t_bases, t_last = [], [], [], [], [], []
                         if self.footstep_boost.active:
                             self.footstep_boost.deactivate()
                         test_session_found = False
@@ -1151,11 +1245,14 @@ class AudioEngine:
             try:
                 if vol_endpoint is not None and self._master_touched:
                     vol_endpoint.SetMasterVolumeLevelScalar(self.user_target_master_vol, guid)
+                    self.volume_ledger.resolve_master(self._device_id)
             except Exception:
                 pass
             for i in range(len(t_vols)):
                 try:
                     t_vols[i].SetMasterVolume(t_bases[i], None)
+                    if t_names[i]:
+                        self.volume_ledger.resolve_session(t_names[i])
                 except Exception:
                     pass
             release_master_device()
