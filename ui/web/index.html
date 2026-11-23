@@ -52,26 +52,6 @@
     </div>
 
     <div class="titlebar-right" onmousedown="event.stopPropagation();">
-      <button class="btn-hdr-action mini-btn" id="btnMiniMode" onclick="toggleMiniMode()" title="Compact HUD: floating always-on-top meter (Ctrl+Alt+M)">
-        <span class="hdr-btn-icon">▣</span>
-        <span class="hdr-btn-text">Mini</span>
-      </button>
-
-      <button class="btn-hdr-action guide-btn" id="btnOpenGuide" onclick="openSettingsGuide()" title="Settings & Audio Dynamics Guide">
-        <span class="hdr-btn-icon">📖</span>
-        <span class="hdr-btn-text">Guide</span>
-      </button>
-
-      <button class="btn-hdr-action eco-btn" id="btnEcoToggle" onclick="toggleEcoMode()" title="Toggle Eco Mode (lowers CPU usage and caps visualizer to 30 FPS)">
-        <span class="hdr-btn-icon">⚡</span>
-        <span class="hdr-btn-text" id="ecoBtnText">Eco</span>
-      </button>
-
-      <button class="btn-hdr-action support-btn" onclick="openDonationLink()" title="Support development on Ko-fi">
-        <span class="hdr-btn-icon">☕</span>
-        <span class="hdr-btn-text">Support</span>
-      </button>
-
       <div class="win-controls">
         <button class="win-btn" onclick="minimizeWindow()" title="Minimize to Tray">
           <svg width="10" height="2" viewBox="0 0 10 2" fill="currentColor"><rect width="10" height="2" rx="1"/></svg>
@@ -365,22 +345,36 @@
 
   <!-- Footer Bar -->
   <div class="footer-bar">
-    <button class="btn-panic-reset" onclick="emergencyReset()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-      </svg>
-      Panic Reset
-    </button>
-    <label class="startup-checkbox-label" title="Run silently in the background tray on Windows boot">
-      <input type="checkbox" id="autoStartSwitch" onchange="toggleAutoStart(this.checked)">
-      <span class="custom-checkbox"></span>
-      <span class="startup-text">Launch on Startup</span>
-    </label>
-    <div class="hotkey-display">
-      <span class="hotkey-label">Hotkeys:</span>
-      <kbd class="hotkey-badge" title="Toggle Limiter">[Ctrl+Alt+L]</kbd>
-      <kbd class="hotkey-badge" title="Nudge Ceiling Up/Down">[Ctrl+Alt+↑/↓]</kbd>
-      <kbd class="hotkey-badge" title="Toggle Compact HUD">[Ctrl+Alt+M]</kbd>
+    <div class="footer-group">
+      <button class="btn-panic-reset" onclick="emergencyReset()" title="Restore every volume AudioClamp changed and open the ceiling (Ctrl+Alt+R)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+        Panic Reset
+      </button>
+      <label class="startup-checkbox-label" title="Run silently in the background tray on Windows boot">
+        <input type="checkbox" id="autoStartSwitch" onchange="toggleAutoStart(this.checked)">
+        <span class="custom-checkbox"></span>
+        <span class="startup-text">Launch on Startup</span>
+      </label>
+    </div>
+    <div class="footer-group footer-actions">
+      <button class="btn-bar-action eco-btn" id="btnEcoToggle" onclick="toggleEcoMode()" title="Eco Mode: lowers CPU use and caps the visualizer at 30 FPS">
+        <span class="bar-btn-icon">⚡</span>
+        <span class="bar-btn-text" id="ecoBtnText">Eco</span>
+      </button>
+      <button class="btn-bar-action mini-btn" id="btnMiniMode" onclick="toggleMiniMode()" title="Compact HUD: floating always-on-top meter (Ctrl+Alt+M)">
+        <span class="bar-btn-icon">▣</span>
+        <span class="bar-btn-text">Mini</span>
+      </button>
+      <button class="btn-bar-action guide-btn" id="btnOpenGuide" onclick="openSettingsGuide()" title="Settings guide and hotkeys">
+        <span class="bar-btn-icon">📖</span>
+        <span class="bar-btn-text">Guide</span>
+      </button>
+      <button class="btn-bar-action support-btn" onclick="openDonationLink()" title="Support development on Ko-fi">
+        <span class="bar-btn-icon">☕</span>
+        <span class="bar-btn-text">Support</span>
+      </button>
     </div>
   </div>
 
@@ -502,7 +496,7 @@
             </div>
             <div class="guide-tip-box">
               <span class="guide-tip-label">SWEET SPOT:</span>
-              <span class="guide-tip-text"><strong>-12 dB to -14 dB</strong> for high dynamic range games like PUBG and Tarkov. <strong>-8 dB to -10 dB</strong> for CS2 and Valorant. Use quick pills (-6, -12, -18, -24) or [Ctrl+Alt+↑/↓] hotkeys to nudge in real-time.</span>
+              <span class="guide-tip-text"><strong>-12 dB to -14 dB</strong> for high dynamic range games like PUBG and Tarkov. <strong>-8 dB to -10 dB</strong> for CS2 and Valorant. Drag the slider, or press <strong>Ctrl+Alt+↑/↓</strong> to nudge it 1 dB at a time, even in game.</span>
             </div>
           </div>
         </div>
@@ -777,7 +771,29 @@
           </div>
         </div>
 
-        <!-- 10. Eco Mode -->
+        <!-- 10. Global Hotkeys -->
+        <div class="guide-card" data-category="scope" id="guide-hotkeys">
+          <div class="guide-card-header">
+            <div class="guide-card-title-left">
+              <span class="guide-item-icon">⌨</span>
+              <span class="guide-item-name">Global Hotkeys</span>
+            </div>
+            <span class="guide-cat-tag">Layout</span>
+          </div>
+          <div class="guide-card-body">
+            <div class="guide-block">
+              <span class="guide-subhead">WORKS ANYWHERE, EVEN IN GAME</span>
+              <div class="guide-hotkey-list">
+                <kbd class="hotkey-badge">Ctrl+Alt+L</kbd><span class="guide-text">Turn the limiter on or off</span>
+                <kbd class="hotkey-badge">Ctrl+Alt+R</kbd><span class="guide-text">Panic Reset: restore every volume AudioClamp changed</span>
+                <kbd class="hotkey-badge">Ctrl+Alt+↑/↓</kbd><span class="guide-text">Nudge the loudness ceiling by 1 dB</span>
+                <kbd class="hotkey-badge">Ctrl+Alt+M</kbd><span class="guide-text">Switch between the full window and the Compact HUD</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 11. Eco Mode -->
         <div class="guide-card" data-category="scope" id="guide-eco-mode">
           <div class="guide-card-header">
             <div class="guide-card-title-left">
@@ -799,7 +815,7 @@
           </div>
         </div>
 
-        <!-- 11. Windows Audio Optimization (Prevent Sound Breaking) -->
+        <!-- 12. Windows Audio Optimization (Prevent Sound Breaking) -->
         <div class="guide-card" data-category="windows" id="guide-windows-audio">
           <div class="guide-card-header">
             <div class="guide-card-title-left">

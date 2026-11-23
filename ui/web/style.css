@@ -331,8 +331,8 @@ body {
   z-index: 101;
 }
 
-/* Clean Header Action Buttons */
-.btn-hdr-action {
+/* Footer Action Buttons (Eco, Mini, Guide, Support) */
+.btn-bar-action {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(56, 189, 248, 0.20);
   color: #cbd5e1;
@@ -348,44 +348,44 @@ body {
   user-select: none;
 }
 
-.btn-hdr-action:hover {
+.btn-bar-action:hover {
   background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-.btn-hdr-action.guide-btn:hover {
+.btn-bar-action.guide-btn:hover {
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.45);
   color: var(--accent-cyan);
   box-shadow: none;
 }
 
-.btn-hdr-action.eco-btn:hover {
+.btn-bar-action.eco-btn:hover {
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.45);
   color: var(--accent-emerald);
 }
 
-.btn-hdr-action.eco-btn.active {
+.btn-bar-action.eco-btn.active {
   background: rgba(16, 185, 129, 0.18);
   border-color: var(--accent-emerald);
   color: var(--accent-emerald);
   box-shadow: 0 0 10px var(--accent-emerald-glow);
 }
 
-.btn-hdr-action.support-btn:hover {
+.btn-bar-action.support-btn:hover {
   background: rgba(56, 189, 248, 0.12);
   border-color: rgba(56, 189, 248, 0.45);
   color: var(--accent-cyan);
   box-shadow: none;
 }
 
-.hdr-btn-icon {
+.bar-btn-icon {
   font-size: 12px;
 }
 
-.hdr-btn-text {
+.bar-btn-text {
   font-family: 'Inter', sans-serif;
   letter-spacing: 0.2px;
 }
@@ -1193,15 +1193,27 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 900;
 }
 
-.hotkey-display {
+.footer-group {
   display: flex;
   align-items: center;
+  gap: 16px;
+}
+
+.footer-actions {
   gap: 6px;
 }
 
-.hotkey-label {
-  font-size: 11.5px;
-  color: var(--text-subtle);
+/* Hotkey list inside the Guide */
+.guide-hotkey-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+}
+
+.guide-hotkey-list .guide-text {
+  margin: 0;
 }
 
 .hotkey-badge {
@@ -1693,9 +1705,9 @@ select:focus-visible {
   to { transform: scaleX(1); }
 }
 
-/* Mini mode header button */
-.btn-hdr-action.mini-btn:hover,
-.btn-hdr-action.mini-btn.active {
+/* Mini mode footer button */
+.btn-bar-action.mini-btn:hover,
+.btn-bar-action.mini-btn.active {
   border-color: rgba(56, 189, 248, 0.4);
   color: var(--accent-cyan);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
